@@ -81,7 +81,14 @@ const CalendarView = ({ bookings, onDateSelect, selectedDate }) => {
         const year = date.getFullYear();
         const month = date.getMonth();
         const days = new Date(year, month + 1, 0).getDate();
-        return Array.from({ length: days }, (_, i) => new Date(year, month, i + 1));
+        // Adjust for Monday start (0=Sun, 1=Mon) -> (Day + 6) % 7 gives 0 for Mon
+        const firstDay = new Date(year, month, 1).getDay();
+        const padding = (firstDay + 6) % 7;
+
+        const daysArray = [];
+        for (let i = 0; i < padding; i++) daysArray.push(null);
+        for (let i = 1; i <= days; i++) daysArray.push(new Date(year, month, i));
+        return daysArray;
     };
 
     const days = getDaysInMonth(currentDate);
@@ -89,7 +96,12 @@ const CalendarView = ({ bookings, onDateSelect, selectedDate }) => {
 
     const isBooked = (dateStr) => bookings.find(b => b.date === dateStr);
 
-    const formatDate = (date) => date.toISOString().split('T')[0];
+    const formatDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
 
     const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -102,13 +114,18 @@ const CalendarView = ({ bookings, onDateSelect, selectedDate }) => {
                 <button type="button" onClick={handleNextMonth} className="p-1 hover:bg-slate-700 rounded"><ChevronRight className="w-5 h-5" /></button>
             </div>
             <div className="grid grid-cols-7 gap-2">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => (
                     <div key={d} className="text-center text-xs text-slate-500 font-bold">{d}</div>
                 ))}
-                {days.map(date => {
+                {days.map((date, idx) => {
+                    if (!date) return <div key={`empty-${idx}`} />;
                     const dateStr = formatDate(date);
                     const booking = isBooked(dateStr);
                     const isSelected = selectedDate === dateStr;
+
+                    // Tooltip positioning adjustment
+                    const isLeftEdge = idx % 7 === 0; // Monday
+                    const isRightEdge = idx % 7 === 6; // Sunday
 
                     return (
                         <div key={dateStr} className="relative group">
@@ -130,7 +147,9 @@ const CalendarView = ({ bookings, onDateSelect, selectedDate }) => {
 
                             {/* Tooltip for booked dates */}
                             {booking && (
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-900 border border-slate-600 rounded shadow-xl z-50 hidden group-hover:block">
+                                <div className={`absolute bottom-full mb-2 w-48 p-2 bg-slate-900 border border-slate-600 rounded shadow-xl z-50 hidden group-hover:block
+                                    ${isLeftEdge ? 'left-0' : isRightEdge ? 'right-0' : 'left-1/2 -translate-x-1/2'}
+                                `}>
                                     <div className="text-xs text-slate-400">Reserved by</div>
                                     <div className="font-bold text-orange-400 text-sm">{booking.pilot}</div>
                                     <div className="text-xs text-slate-300 italic">{booking.project}</div>
@@ -392,12 +411,13 @@ const GlobalCalendarModal = ({ vehicles, onClose }) => {
         const year = date.getFullYear();
         const month = date.getMonth();
         const days = new Date(year, month + 1, 0).getDate();
-        // Adjust for start day of week (0 = Sunday)
+        // Adjust for Monday start (0=Sun, 1=Mon)
         const firstDay = new Date(year, month, 1).getDay();
+        const padding = (firstDay + 6) % 7;
 
         const daysArray = [];
         // Add empty info for padding
-        for (let i = 0; i < firstDay; i++) {
+        for (let i = 0; i < padding; i++) {
             daysArray.push(null);
         }
 
@@ -459,7 +479,7 @@ const GlobalCalendarModal = ({ vehicles, onClose }) => {
                 {/* Calendar Grid */}
                 <div className="flex-1 overflow-y-auto p-6 bg-slate-900/50">
                     <div className="grid grid-cols-7 gap-px bg-slate-700 mb-px border border-slate-700 rounded-t-lg overflow-hidden">
-                        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(d => (
+                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(d => (
                             <div key={d} className="bg-slate-800 p-3 text-center text-sm font-bold text-slate-400 uppercase tracking-widest">
                                 {d}
                             </div>
@@ -472,6 +492,10 @@ const GlobalCalendarModal = ({ vehicles, onClose }) => {
 
                             const dayBookings = getBookingsForDate(date);
                             const isToday = date.toDateString() === new Date().toDateString();
+
+                            // Tooltip positioning adjustment
+                            const isLeftEdge = idx % 7 === 0; // Monday
+                            const isRightEdge = idx % 7 === 6; // Sunday
 
                             return (
                                 <div key={date.toISOString()} className={`bg-slate-900/80 p-2 min-h-[140px] hover:bg-slate-800/80 transition-colors group relative ${isToday ? 'ring-1 ring-orange-500/50 inset-0' : ''}`}>
@@ -491,7 +515,9 @@ const GlobalCalendarModal = ({ vehicles, onClose }) => {
                                                     </div>
 
                                                     {/* Popover Tooltip */}
-                                                    <div className="absolute left-1/2 bottom-full -translate-x-1/2 mb-2 w-64 bg-slate-900 border border-slate-600 rounded-lg shadow-2xl p-3 z-50 hidden group-hover/item:block pointer-events-none">
+                                                    <div className={`absolute bottom-full mb-2 w-64 bg-slate-900 border border-slate-600 rounded-lg shadow-2xl p-3 z-50 hidden group-hover/item:block pointer-events-none
+                                                        ${isLeftEdge ? 'left-0' : isRightEdge ? 'right-0' : 'left-1/2 -translate-x-1/2'}
+                                                     `}>
                                                         <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-700">
                                                             <div className="font-bold text-orange-400 flex items-center gap-2">
                                                                 <Icon className="w-4 h-4" />
@@ -515,7 +541,9 @@ const GlobalCalendarModal = ({ vehicles, onClose }) => {
                                                             )}
                                                         </div>
                                                         {/* Arrow */}
-                                                        <div className="absolute left-1/2 top-full -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-600" />
+                                                        <div className={`absolute top-full -mt-1 border-4 border-transparent border-t-slate-600
+                                                            ${isLeftEdge ? 'left-4' : isRightEdge ? 'right-4' : 'left-1/2 -translate-x-1/2'}
+                                                         `} />
                                                     </div>
                                                 </div>
                                             );
