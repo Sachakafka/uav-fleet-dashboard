@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, NotebookPen, X, AlertCircle, CheckCircle, HelpCircle, Activity, Calendar as CalendarIcon, Edit, ChevronLeft, ChevronRight, Settings, Loader2, Rocket, Plane, Zap, Shield, Crosshair, Radar, Target } from 'lucide-react';
+import { Plus, NotebookPen, X, AlertCircle, CheckCircle, HelpCircle, Activity, Calendar as CalendarIcon, Edit, ChevronLeft, ChevronRight, Loader2, Rocket, Plane, Zap, Shield, Crosshair, Radar, Target } from 'lucide-react';
 
 const ICON_MAP = {
     rocket: Rocket,
@@ -71,48 +71,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-// ClickUp Integration Service
-const createClickUpTask = async (booking, vehicle) => {
-    const apiKey = localStorage.getItem('clickup_api_key');
-    const listId = localStorage.getItem('clickup_list_id');
 
-    if (!apiKey || !listId) {
-        console.warn('ClickUp credentials missing. Skipping task creation.');
-        return { success: false, message: 'ClickUp credentials not found in settings.' };
-    }
-
-    const payload = {
-        name: `${booking.project} - Flight Test for Vehicle #${vehicle.id}`,
-        description: `**Pilot**: ${booking.pilot}\n**Duration**: ${booking.duration}\n**Date**: ${booking.date}\n**Vehicle Status**: ${vehicle.status}\n**Notes**: ${vehicle.notes}\n**Booking Notes**: ${booking.notes || 'None'}`,
-        status: 'Open',
-        priority: 3,
-        due_date: new Date(booking.date).getTime()
-    };
-
-    try {
-        const response = await fetch(`https://api.clickup.com/api/v2/list/${listId}/task`, {
-            method: 'POST',
-            headers: {
-                'Authorization': apiKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            // Attempt to parse error
-            const errorData = await response.json().catch(() => ({}));
-            console.error('ClickUp API Error:', errorData);
-            throw new Error(errorData.err || 'Failed to create task');
-        }
-
-        const data = await response.json();
-        return { success: true, url: data.url };
-    } catch (error) {
-        console.error('ClickUp Integration Error:', error);
-        return { success: false, message: error.message };
-    }
-};
 
 const CalendarView = ({ bookings, onDateSelect, selectedDate }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -205,20 +164,9 @@ const BookingModal = ({ vehicle, onClose, onSave }) => {
         // 1. Save locally
         onSave(vehicle.id, formData);
 
-        // 2. Trigger ClickUp Task
-        setStatusMsg('Creating ClickUp Task...');
-        const result = await createClickUpTask(formData, vehicle);
-
         setIsSubmitting(false);
-
-        if (result.success) {
-            alert('Booking Confirmed & ClickUp Task Created!');
-            onClose();
-        } else {
-            // Still close if local save worked, but warn user
-            alert(`Booking saved locally, but ClickUp failed: ${result.message}`);
-            onClose();
-        }
+        alert('Booking Confirmed!');
+        onClose();
     };
 
     return (
@@ -587,7 +535,6 @@ function App() {
     const [bookingModalVehicle, setBookingModalVehicle] = useState(null);
     const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState(null);
-    const [settingsOpen, setSettingsOpen] = useState(false);
     const [calendarOpen, setCalendarOpen] = useState(false);
 
     const handleBooking = (id, booking) => {
@@ -634,13 +581,7 @@ function App() {
                         <CalendarIcon className="w-5 h-5" />
                         <span className="hidden md:inline font-bold uppercase tracking-wider text-xs">Fleet Schedule</span>
                     </button>
-                    <button
-                        onClick={() => setSettingsOpen(true)}
-                        className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-400 hover:text-white px-4 py-3 rounded transition-all"
-                        title="Settings"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </button>
+
                     <button
                         onClick={() => { setEditingVehicle(null); setVehicleModalOpen(true); }}
                         className="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white px-6 py-3 rounded flex items-center gap-2 transition-all font-bold uppercase tracking-wider"
@@ -749,9 +690,7 @@ function App() {
                 />
             )}
 
-            {settingsOpen && (
-                <SettingsModal onClose={() => setSettingsOpen(false)} />
-            )}
+
 
             {calendarOpen && (
                 <GlobalCalendarModal
