@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { Plus, NotebookPen, X, AlertCircle, CheckCircle, HelpCircle, Activity, Calendar as CalendarIcon, Edit, ChevronLeft, ChevronRight, Loader2, Rocket, Plane, Zap, Shield, Crosshair, Radar, Target } from 'lucide-react';
 
 const ICON_MAP = {
@@ -531,28 +532,169 @@ const GlobalCalendarModal = ({ vehicles, onClose }) => {
 };
 
 function App() {
-    const [vehicles, setVehicles] = useState(initialVehicles);
+    const [vehicles, setVehicles] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [bookingModalVehicle, setBookingModalVehicle] = useState(null);
     const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState(null);
     const [calendarOpen, setCalendarOpen] = useState(false);
 
-    const handleBooking = (id, booking) => {
-        setVehicles(vehicles.map(v => {
-            if (v.id === id) {
-                return { ...v, bookings: [...v.bookings, booking] };
+    // Initial Data Seeding (only if DB is empty)
+    const seedInitialData = async () => {
+        const { count } = await supabase.from('vehicles').select('*', { count: 'exact', head: true });
+        if (count === 0) {
+            console.log('Seeding initial data...');
+            const { error } = await supabase.from('vehicles').insert(initialVehicles.map(v => ({
+                id: v.id,
+                name: v.name,
+                status: v.status,
+                icon: v.icon,
+                notes: v.notes
+            })));
+
+            if (!error) {
+                // Seed bookings separately
+                const bookingsToInsert = [];
+                initialVehicles.forEach(v => {
+                    v.bookings.forEach(b => {
+                        bookingsToInsert.push({
+                            vehicle_id: v.id,
+                            date: b.date,
+                            pilot: b.pilot,
+                            project: b.project,
+                            duration: b.duration,
+                            notes: b.notes
+                        });
+                    });
+                });
+                if (bookingsToInsert.length > 0) {
+                    await supabase.from('bookings').insert(bookingsToInsert);
+                }
             }
-            return v;
-        }));
+        }
     };
 
-    const handleSaveVehicle = (data) => {
-        if (editingVehicle) {
-            setVehicles(vehicles.map(v => v.id === data.id ? { ...data, bookings: v.bookings } : v));
-        } else {
-            setVehicles([...vehicles, { ...data, bookings: [] }]);
+    const fetchData = async () => {
+        if (!isSupabaseConfigured()) {
+            setVehicles(initialVehicles);
+            setLoading(false);
+            return;
         }
-        setEditingVehicle(null);
+
+        try {
+            // 1. Fetch Vehicles
+            const { data: vehiclesData, error: vError } = await supabase
+                .from('vehicles')
+                .select('*')
+                .order('id');
+
+            if (vError) throw vError;
+
+            // 2. Fetch Bookings
+            const { data: bookingsData, error: bError } = await supabase
+                .from('bookings')
+                .select('*');
+
+            if (bError) throw bError;
+
+            // 3. Merge
+            const merged = vehiclesData.map(v => ({
+                ...v,
+                bookings: bookingsData.filter(b => b.vehicle_id === v.id)
+            }));
+
+            setVehicles(merged);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            // Fallback to local if fetch fails (e.g., table missing)
+            setVehicles(initialVehicles);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isSupabaseConfigured()) {
+            seedInitialData().then(() => fetchData());
+
+            // Realtime Subscription
+            const channel = supabase
+                .channel('schema-db-changes')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public' },
+                    () => {
+                        // Refresh data on any change
+                        fetchData();
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        } else {
+            console.warn('Supabase not configured. Using local data.');
+            setVehicles(initialVehicles);
+            setLoading(false);
+        }
+    }, []);
+
+    const handleBooking = async (id, booking) => {
+        if (!isSupabaseConfigured()) {
+            // Fallback (Local)
+            setVehicles(vehicles.map(v => {
+                if (v.id === id) {
+                    return { ...v, bookings: [...v.bookings, booking] };
+                }
+                return v;
+            }));
+            return;
+        }
+
+        // Supabase Insert
+        const { error } = await supabase.from('bookings').insert({
+            vehicle_id: id,
+            date: booking.date,
+            pilot: booking.pilot,
+            project: booking.project,
+            duration: booking.duration,
+            notes: booking.notes
+        });
+
+        if (error) {
+            console.error('Error saving booking:', error);
+            alert('Failed to save booking');
+        }
+    };
+
+    const handleSaveVehicle = async (data) => {
+        if (!isSupabaseConfigured()) {
+            // Fallback (Local)
+            if (editingVehicle) {
+                setVehicles(vehicles.map(v => v.id === data.id ? { ...data, bookings: v.bookings } : v));
+            } else {
+                setVehicles([...vehicles, { ...data, bookings: [] }]);
+            }
+            setEditingVehicle(null);
+            return;
+        }
+
+        // Supabase Upsert
+        const { error } = await supabase.from('vehicles').upsert({
+            id: data.id,
+            name: data.name,
+            status: data.status,
+            icon: data.icon,
+            notes: data.notes
+        });
+
+        if (error) {
+            console.error('Error saving vehicle:', error);
+            alert('Failed to save vehicle');
+        } else {
+            setEditingVehicle(null);
+        }
     };
 
     const openEditModal = (vehicle) => {
