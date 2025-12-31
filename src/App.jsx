@@ -49,7 +49,7 @@ const initialVehicles = [
     }
 ];
 
-const PILOTS = ['Maverick', 'Iceman', 'Viper', 'Jester', 'Rooster', 'Bob'];
+const PILOTS = ['Maverick', 'Iceman', 'Viper', 'Jester', 'Rooster', 'Bob', 'Michael', 'Devon', 'Renzo'];
 
 const StatusBadge = ({ status }) => {
     const styles = {
@@ -738,9 +738,9 @@ function App() {
                 <div>
                     <h1 className="text-3xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
                         <Activity className="w-8 h-8 text-orange-500" />
-                        UAV Fleet Command
+                        DQ Fleet
                     </h1>
-                    <p className="text-slate-400 mt-2 font-mono text-sm">R&D FIELD OPERATIONS UNIT // SECTOR 7</p>
+                    <p className="text-slate-400 mt-2 font-mono text-sm">R&D FIELD OPERATIONS UNIT</p>
                 </div>
                 <div className="flex gap-4">
                     <button
