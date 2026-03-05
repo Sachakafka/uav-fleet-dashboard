@@ -1,10 +1,10 @@
 -- ==========================================
--- Phase 0 除錯查詢
--- 用於診斷為什麼看不到載具
+-- Phase 0 debug queries
+-- Use these to diagnose why vehicles are not visible
 -- ==========================================
 
--- ===== 1. 檢查 vehicles 表是否有資料（繞過 RLS）=====
--- 需要在 Supabase Dashboard 以 service_role 權限執行
+-- ===== 1. Check if vehicles table has data (bypass RLS) =====
+-- Run in Supabase Dashboard with service_role
 SELECT 
   id,
   name,
@@ -15,12 +15,12 @@ SELECT
 FROM vehicles
 ORDER BY created_at DESC;
 
--- ===== 2. 檢查當前使用者資訊 =====
+-- ===== 2. Check current user =====
 SELECT 
   auth.uid() as current_user_id,
   auth.role() as current_role;
 
--- ===== 3. 檢查當前使用者的 profile =====
+-- ===== 3. Check current user's profile =====
 SELECT 
   id,
   email,
@@ -29,7 +29,7 @@ SELECT
 FROM profiles
 WHERE id = auth.uid();
 
--- ===== 4. 檢查 vehicles 的 RLS 政策 =====
+-- ===== 4. Check vehicles RLS policies =====
 SELECT 
   schemaname,
   tablename,
@@ -42,14 +42,14 @@ FROM pg_policies
 WHERE tablename = 'vehicles'
 ORDER BY policyname;
 
--- ===== 5. 統計所有載具（不考慮 deleted_at）=====
+-- ===== 5. Count all vehicles (ignoring deleted_at) =====
 SELECT 
   COUNT(*) as total_vehicles,
   COUNT(*) FILTER (WHERE deleted_at IS NULL) as active_vehicles,
   COUNT(*) FILTER (WHERE deleted_at IS NOT NULL) as deleted_vehicles
 FROM vehicles;
 
--- ===== 6. 依 department 統計載具 =====
+-- ===== 6. Count vehicles by department =====
 SELECT 
   department,
   COUNT(*) as vehicle_count,
@@ -59,15 +59,14 @@ GROUP BY department
 ORDER BY department;
 
 -- ==========================================
--- 可能的解決方案
+-- Possible fixes
 -- ==========================================
 
--- 如果您的使用者沒有 department，請執行：
+-- If the current user has no department, run:
 /*
 UPDATE profiles 
 SET department = 'R&D'
 WHERE id = auth.uid();
 */
 
--- 如果 vehicles 表是空的，需要重新插入測試資料
--- 請參考原始的 seed data 或手動建立載具
+-- If vehicles table is empty, re-insert seed data or create vehicles manually.

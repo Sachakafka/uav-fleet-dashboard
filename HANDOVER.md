@@ -56,4 +56,32 @@ This document helps new colleagues take over development. All project documentat
 
 ---
 
-**Last updated:** February 2026. For questions, use the docs index and the README.
+**Last updated:** March 2026. For questions, use the docs index and the README.
+
+---
+
+## Current branch & Batch 5 (approval / notifications)
+
+**Branch:** `feature/batch-5-approval`
+
+Before pushing, ensure all changes are committed. This batch adds:
+
+### New DB migrations (run in order in Supabase SQL Editor)
+- `db/14_change_logs_rls_authenticated_select.sql` — change_logs RLS for authenticated select
+- `db/15_approval_and_notifications.sql` — approval workflow and notifications tables
+- `db/16_approvers_bookings_rls.sql` — RLS for approvers on bookings
+- `db/17_approvers_bookings_select_all.sql` — approvers can select all bookings
+- `db/18_bookings_rename_columns.sql` — rename booking columns
+- `db/19_normalize_vehicle_status_on_mission.sql` — normalize vehicle status
+
+### New frontend
+- **Components:** `DeleteVehicleModal.jsx`, `FilterFunnelIcon.jsx`, `NotificationsPanel.jsx`
+- **Lib:** `approvers.js`, `vehicleTimeline.js` (+ `approvers.test.js`)
+- **Page:** `Notifications.jsx`
+
+### Removed (intentional)
+- `db/08_vehicles_seven_names.sql.OLD`
+- `db/run_all_in_supabase.sql`
+
+### Modified (batch-5 related)
+- App, Header, AuthContext; Dashboard, MyBookings, Profile; BookingModal, CalendarOverviewModal, ChangeHistoryModal, EditVehicleModal, FilterModal, VehicleCard; database.js, changeLogger.js, errorHandler.js, hardwareConfig.js; e2e/dashboard.spec.js

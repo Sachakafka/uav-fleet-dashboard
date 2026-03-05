@@ -6,6 +6,7 @@ import { handleError } from '../lib/errorHandler'
 import db from '../lib/database'
 import { hardwareConfigToText } from '../lib/hardwareConfig'
 import { DashboardSkeleton } from '../components/LoadingSkeleton'
+import BookingModal from '../components/BookingModal'
 
 function formatDate(iso) {
     if (!iso) return '—'
@@ -20,11 +21,26 @@ function formatTime(iso) {
 }
 
 function formatRange(start, end) {
-    const s = formatDate(start)
-    const t1 = formatTime(start)
-    const t2 = formatTime(end)
-    if (t1 && t2) return `${s} ${t1} – ${t2}`
-    return s
+    if (!start || !end) return '—'
+    
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    
+    // Check if it's a multi-day booking (different dates)
+    const startDay = startDate.toISOString().split('T')[0]
+    const endDay = endDate.toISOString().split('T')[0]
+    
+    if (startDay !== endDay) {
+        // Multi-day booking: show full date range
+        return `${formatDate(start)} – ${formatDate(end)}`
+    } else {
+        // Same day: show date with time range if available
+        const s = formatDate(start)
+        const t1 = formatTime(start)
+        const t2 = formatTime(end)
+        if (t1 && t2) return `${s} ${t1} – ${t2}`
+        return s
+    }
 }
 
 export default function MyBookings() {
@@ -32,6 +48,7 @@ export default function MyBookings() {
     const { showSuccess, showError } = useToast()
     const [bookings, setBookings] = useState([])
     const [loading, setLoading] = useState(true)
+    const [editingBooking, setEditingBooking] = useState(null)
 
     const fetchBookings = async () => {
         if (!user?.id) return
@@ -63,7 +80,11 @@ export default function MyBookings() {
         try {
             await db.deleteBooking(booking.id)
             showSuccess('Booking cancelled.')
+            if (editingBooking?.id === booking.id) {
+                setEditingBooking(null)
+            }
             fetchBookings()
+            window.dispatchEvent(new CustomEvent('booking-list-changed'))
         } catch (error) {
             console.error('Delete booking error:', error)
             const details = await handleError(error, 'MyBookings.handleDeleteBooking', { userId: user?.id })
@@ -99,11 +120,14 @@ export default function MyBookings() {
                                     <div className="my-booking-meta">
                                         <span>🚀 {vehicleName(b)}</span>
                                         <span>📅 {formatRange(b.start_time, b.end_time)}</span>
-                                        {b.who_ordered != null && b.who_ordered !== '' && <span>Ordered by: {b.who_ordered}</span>}
+                                        {b.status === 'pending_approval' && (
+                                            <span className="my-booking-pending" title="Awaiting approver confirmation">⏳ Pending approval</span>
+                                        )}
+                                        {b.requester != null && b.requester !== '' && <span>Requester: {b.requester}</span>}
                                         {b.pilot_name != null && b.pilot_name !== '' && <span>👤 {b.pilot_name}</span>}
                                     </div>
-                                    {b.notes && (
-                                        <p className="my-booking-notes">{b.notes}</p>
+                                    {b.description && (
+                                        <p className="my-booking-notes">{b.description}</p>
                                     )}
                                     {b.snapshotted_hw_config && hardwareConfigToText(b.snapshotted_hw_config) && (
                                         <p className="my-booking-hw" title="Hardware config at time of booking (snapshot)">
@@ -112,6 +136,14 @@ export default function MyBookings() {
                                     )}
                                 </div>
                                 <div className="my-booking-actions">
+                                    <button
+                                        type="button"
+                                        className="btn-edit-booking"
+                                        onClick={() => setEditingBooking(b)}
+                                        title="Edit this booking"
+                                    >
+                                        Edit
+                                    </button>
                                     <button
                                         type="button"
                                         className="btn-cancel-booking"
@@ -126,6 +158,20 @@ export default function MyBookings() {
                     </div>
                 )}
             </div>
+            {editingBooking && (
+                <BookingModal
+                    vehicle={{
+                        id: editingBooking.vehicle_id,
+                        name: vehicleName(editingBooking)
+                    }}
+                    existingBooking={editingBooking}
+                    onClose={() => setEditingBooking(null)}
+                    onSave={() => {
+                        setEditingBooking(null)
+                        fetchBookings()
+                    }}
+                />
+            )}
         </div>
     )
 }

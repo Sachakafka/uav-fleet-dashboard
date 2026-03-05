@@ -1,12 +1,13 @@
-# OAuth 設定檢查清單 ✅
+# OAuth Setup Checklist
 
-## 🔴 立即執行（最重要！）
+## Critical: Do this first
 
-### 1. Supabase Dashboard 設定
+### 1. Supabase Dashboard
 
-前往: https://app.supabase.com/project/citoiconzejdfjjefnbi/auth/url-configuration
+Go to: https://app.supabase.com/project/citoiconzejdfjjefnbi/auth/url-configuration  
+(Replace the project ID with yours if different.)
 
-#### A. Redirect URLs (必須添加所有這些)
+#### A. Redirect URLs (add all of these)
 ```
 http://localhost:5173
 http://localhost:5173/
@@ -21,47 +22,48 @@ https://uav-fleet-dashboard-git-main-alexs-projects-043bd484.vercel.app/
 https://uav-fleet-dashboard.vercel.app
 ```
 
-### 2. Google Cloud Console 設定
+### 2. Google Cloud Console
 
-前往: https://console.cloud.google.com/apis/credentials
+Go to: https://console.cloud.google.com/apis/credentials
 
-找到你的 OAuth 2.0 Client ID，在 **Authorized redirect URIs** 添加：
+Open your OAuth 2.0 Client ID and add this to **Authorized redirect URIs**:
 
 ```
 https://citoiconzejdfjjefnbi.supabase.co/auth/v1/callback
 ```
+(Replace the project ref with your Supabase project ref.)
 
-### 3. Vercel 環境變數檢查
+### 3. Vercel environment variables
 
-前往: https://vercel.com/alexs-projects-043bd484/uav-fleet-dashboard/settings/environment-variables
+Go to: https://vercel.com/alexs-projects-043bd484/uav-fleet-dashboard/settings/environment-variables
 
-確認以下變數存在：
+Confirm these exist:
 
-```
-VITE_SUPABASE_URL=https://citoiconzejdfjjefnbi.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdG9pY29uemVqZGZqamVmbmJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MDQ5MTgsImV4cCI6MjA4MzI4MDkxOH0.E6vv3ZRILj9v4x7-g0CZI1mKMB-SaFzfrfiqc48ftfw
-```
+- `VITE_SUPABASE_URL` — your Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` — your Supabase anon key
 
-## 🟡 完成後測試步驟
+(Do not commit real keys into the repo; set them in Vercel only.)
 
-1. **清除瀏覽器資料**
-   - 打開 Chrome DevTools (F12)
+## After setup: test
+
+1. **Clear browser data**
+   - Open Chrome DevTools (F12)
    - Application → Storage → Clear site data
-   - 或使用無痕模式
+   - Or use a private/incognito window
 
-2. **訪問 Vercel URL**
+2. **Open the Vercel URL**
    ```
    https://uav-fleet-dashboard.vercel.app
    ```
 
-3. **點擊 "Sign in with Google"**
-   - 應該跳轉到 Google 登入頁面
-   - 選擇帳號後應該回到你的 app
-   - 應該看到 Dashboard 而不是登入頁面
+3. **Click "Sign in with Google"**
+   - You should be sent to Google sign-in
+   - After choosing an account you should return to the app
+   - You should see the Dashboard, not the login page again
 
-4. **檢查 Console**
-   - 打開 DevTools Console
-   - 應該看到:
+4. **Check the Console**
+   - Open DevTools → Console
+   - You should see something like:
      ```
      Initiating Google OAuth with redirect: https://uav-fleet-dashboard.vercel.app
      Auth event: SIGNED_IN Session: true
@@ -69,45 +71,45 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
      User logged in, redirecting to dashboard
      ```
 
-## 🟢 如果還是不行
+## If it still fails
 
-### Debug 步驟
+### Debug steps
 
-1. **檢查 URL hash**
-   - 登入後 URL 是否有 `#error` 或 `#access_token`
-   - 如果有 `#error`，記下錯誤訊息
+1. **Check the URL hash**
+   - After sign-in, does the URL have `#error` or `#access_token`?
+   - If `#error`, note the error message
 
-2. **檢查 Network tab**
-   - 看是否有 `/auth/v1/token` 的請求
-   - 檢查 response 是否有錯誤
+2. **Check the Network tab**
+   - Look for a request to `/auth/v1/token`
+   - Check the response for errors
 
-3. **檢查 Supabase Logs**
-   - 前往 Supabase Dashboard → Logs → Auth Logs
-   - 查看是否有錯誤訊息
+3. **Check Supabase Logs**
+   - Supabase Dashboard → Logs → Auth Logs
+   - Look for error messages
 
-### 常見錯誤
+### Common errors
 
-| 錯誤訊息 | 原因 | 解決方法 |
-|---------|------|---------|
-| `redirect_uri_mismatch` | Redirect URL 不匹配 | 檢查 Supabase 和 Google Console 的 redirect URLs |
-| `invalid_request` | OAuth 配置錯誤 | 重新檢查 Google OAuth 設定 |
-| `access_denied` | 使用者取消登入 | 正常行為，重新登入即可 |
-| 無限迴圈 | Redirect URL 未設定 | 確認 Supabase Redirect URLs 已保存 |
+| Error | Cause | Fix |
+|-------|--------|-----|
+| `redirect_uri_mismatch` | Redirect URL mismatch | Ensure Supabase and Google Console redirect URLs match exactly |
+| `invalid_request` | OAuth config wrong | Recheck Google OAuth client settings |
+| `access_denied` | User cancelled sign-in | Normal; try signing in again |
+| Redirect loop | Redirect URL not set | Confirm Supabase Redirect URLs are saved |
 
-## 📝 完成後確認
+## Completion checklist
 
-- [ ] Supabase Redirect URLs 已添加並保存
-- [ ] Supabase Site URL 已設定
-- [ ] Google Cloud Console Redirect URI 已添加
-- [ ] Vercel 環境變數正確
-- [ ] 已清除瀏覽器 cache
-- [ ] 測試登入成功
-- [ ] 測試登出成功
-- [ ] 測試重新整理頁面後仍保持登入狀態
+- [ ] Supabase Redirect URLs added and saved
+- [ ] Supabase Site URL set
+- [ ] Google Cloud Console redirect URI added
+- [ ] Vercel env vars set correctly
+- [ ] Browser cache cleared
+- [ ] Sign-in test passed
+- [ ] Sign-out test passed
+- [ ] Page refresh still shows signed-in state
 
-## 🚀 部署新版本
+## Deploying updates
 
-完成上述設定後，推送程式碼更新：
+After the above is done, push code changes:
 
 ```bash
 git add .
@@ -115,4 +117,4 @@ git commit -m "fix: improve OAuth redirect handling and prevent infinite loop"
 git push origin main
 ```
 
-等待 Vercel 自動部署完成（約 1-2 分鐘）。
+Wait for Vercel to finish deploying (about 1–2 minutes).

@@ -62,7 +62,7 @@ export default function Profile() {
                         </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid #333', paddingTop: '1.5rem' }}>
+                    <div style={{ paddingTop: '1.5rem' }}>
                         <h3 style={{ marginBottom: '1rem', color: '#888' }}>Account Details</h3>
                         <div style={{ display: 'grid', gap: '1rem' }}>
                             <div>
@@ -72,7 +72,7 @@ export default function Profile() {
                                     value={editUserName}
                                     onChange={(e) => setEditUserName(e.target.value)}
                                     placeholder="Nickname"
-                                    style={{ display: 'block', width: '100%', marginTop: '0.25rem', padding: '0.5rem', borderRadius: '4px', border: '1px solid #444' }}
+                                    className="profile-input"
                                 />
                                 {error && <p style={{ color: '#ef4444', fontSize: '0.9rem', marginTop: '0.5rem' }}>{error}</p>}
                             </div>
@@ -93,12 +93,6 @@ export default function Profile() {
                                 {saving ? 'Saving…' : 'Save'}
                             </button>
                         </div>
-                    </div>
-
-                    <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #333' }}>
-                        <p style={{ color: '#666', fontStyle: 'italic' }}>
-                            Account settings are managed via the central DeltaQuad directory.
-                        </p>
                     </div>
                 </div>
             </div>

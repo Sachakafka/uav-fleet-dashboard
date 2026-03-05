@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import AdminPanel from './pages/AdminPanel'
 import Profile from './pages/Profile'
 import MyBookings from './pages/MyBookings'
+import Notifications from './pages/Notifications'
 import './App.css'
 
 function PrivateRoute({ children, adminOnly = false }) {
@@ -42,6 +43,12 @@ function AppRoutes() {
         <Route path="/profile" element={
           <PrivateRoute>
             <Profile />
+          </PrivateRoute>
+        } />
+
+        <Route path="/notifications" element={
+          <PrivateRoute>
+            <Notifications />
           </PrivateRoute>
         } />
 

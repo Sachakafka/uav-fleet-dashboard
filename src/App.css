@@ -242,6 +242,276 @@ body {
   cursor: default;
   opacity: 0.5;
 }
+.profile-menu-item-notifications-pending {
+  font-weight: 700;
+}
+.profile-menu-item-badge {
+  margin-left: 0.35rem;
+  font-weight: 700;
+  color: var(--accent-orange);
+}
+
+/* Notifications (approvals) dropdown */
+.header-notifications-wrap {
+  position: relative;
+}
+.header-notifications-wrap .icon-btn-header {
+  position: relative;
+}
+.header-notifications-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: #fff;
+  background: var(--accent-orange);
+  border-radius: 9px;
+}
+.header-notifications-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 70vh;
+  overflow: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+}
+.header-notifications-title {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  background: #0f172a;
+}
+.header-notifications-loading,
+.header-notifications-empty {
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.header-notifications-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.header-notifications-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.header-notifications-item-decided {
+  cursor: default;
+  opacity: 0.85;
+}
+.header-notifications-item-decided .header-notifications-item-body {
+  margin-bottom: 0;
+}
+.header-notifications-status-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+.header-notifications-status-badge.approved {
+  background: #166534;
+  color: #fff;
+}
+.header-notifications-status-badge.rejected {
+  background: #991b1b;
+  color: #fff;
+}
+.header-notifications-status-badge.pending {
+  background: var(--primary-color);
+  color: #fff;
+}
+.header-notifications-item:last-child {
+  border-bottom: none;
+}
+.header-notifications-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 0.5rem;
+}
+.header-notifications-who {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.header-notifications-project {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.header-notifications-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.header-notifications-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.header-notifications-btn {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+.header-notifications-btn.approve {
+  background: #166534;
+  color: #fff;
+}
+.header-notifications-btn.approve:hover {
+  background: #15803d;
+}
+.header-notifications-btn.reject {
+  background: #991b1b;
+  color: #fff;
+}
+.header-notifications-btn.reject:hover {
+  background: #b91c1c;
+}
+.header-notifications-btn.edit {
+  background: var(--primary-color);
+  color: #fff;
+}
+.header-notifications-btn.edit:hover {
+  background: var(--primary-hover);
+}
+
+/* Notification section on Profile page */
+.profile-notifications-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+.profile-notifications-title {
+  margin: 0 0 1rem 0;
+  color: #888;
+  font-size: 1rem;
+}
+.profile-notifications-list {
+  max-height: 50vh;
+  overflow: auto;
+}
+
+/* ========== NOTIFICATIONS PAGE (card list) ========== */
+.notifications-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.notifications-page-loading,
+.notifications-page-empty {
+  padding: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  text-align: center;
+}
+.notifications-page-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.notifications-page-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.notifications-page-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.notifications-page-card-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+.notifications-page-card-title {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.notifications-page-project {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.notifications-page-status {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.notifications-page-label {
+  color: var(--text-secondary);
+  min-width: 7rem;
+}
+.notifications-page-value {
+  color: var(--text-primary);
+}
+.notifications-page-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.notifications-page-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.notifications-page-btn-approve {
+  background: #166534;
+  color: #fff;
+}
+.notifications-page-btn-approve:not(.notifications-page-btn-disabled):hover {
+  background: #15803d;
+}
+.notifications-page-btn-reject {
+  background: #991b1b;
+  color: #fff;
+}
+.notifications-page-btn-reject:not(.notifications-page-btn-disabled):hover {
+  background: #b91c1c;
+}
+.notifications-page-btn-edit {
+  background: var(--primary-color);
+  color: #fff;
+}
+.notifications-page-btn-edit:hover {
+  background: var(--primary-hover);
+}
+.notifications-page-btn-disabled,
+.notifications-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ========== DASHBOARD CONTENT ========== */
 .dashboard-content {
@@ -536,6 +806,11 @@ body {
   color: var(--text-secondary);
 }
 
+.my-booking-pending {
+  color: var(--amber-400, #f59e0b);
+  font-weight: 600;
+}
+
 .my-booking-notes {
   margin: 0.5rem 0 0 0;
   font-size: 0.85rem;
@@ -552,6 +827,26 @@ body {
 
 .my-booking-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-edit-booking {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-edit-booking:hover {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
 }
 
 .btn-cancel-booking {
@@ -607,4 +902,70 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ========== PROFILE PAGE ========== */
+.profile-input {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.profile-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+.profile-input:focus {
+  border-color: var(--primary-color);
+}
+
+.profile-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.profile-actions-bottom {
+  margin-top: 1.5rem;
+}
+.profile-btn-cancel {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+.profile-btn-cancel:hover {
+  background: #1e293b;
+  color: var(--text-primary);
+  border-color: #475569;
+}
+.profile-btn-save {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  color: #fff;
+}
+.profile-btn-save:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.profile-btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

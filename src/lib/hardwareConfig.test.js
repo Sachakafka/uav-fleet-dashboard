@@ -6,7 +6,8 @@ import {
   normalizeConfig,
   hardwareConfigToText,
   validateConfig,
-  isEmptyConfig
+  isEmptyConfig,
+  hwConfigDiffLines
 } from './hardwareConfig'
 
 describe('hardwareConfig', () => {
@@ -183,6 +184,34 @@ describe('hardwareConfig', () => {
     })
     it('false when legacy_text set', () => {
       expect(isEmptyConfig({ legacy_text: 'x' })).toBe(false)
+    })
+  })
+
+  describe('hwConfigDiffLines', () => {
+    it('returns empty when configs are equal', () => {
+      const c = getDefaultConfig()
+      expect(hwConfigDiffLines(c, c)).toEqual([])
+      expect(hwConfigDiffLines(null, getDefaultConfig())).toEqual([])
+    })
+    it('returns Radio line when radio enabled changes', () => {
+      const oldC = getDefaultConfig()
+      const newC = getDefaultConfig()
+      newC.radio.h30.enabled = true
+      const lines = hwConfigDiffLines(oldC, newC)
+      expect(lines).toContain('Radio: H30 disabled → enabled')
+    })
+    it('returns GPS and Frequency lines for preset change', () => {
+      const lines = hwConfigDiffLines(HARDWARE_PRESETS.standard.config, HARDWARE_PRESETS.silvusC.config)
+      expect(lines.some(l => l.startsWith('Radio:'))).toBe(true)
+      expect(lines.some(l => l.startsWith('Frequency:'))).toBe(true)
+      expect(lines.some(l => l.startsWith('GPS:'))).toBe(true)
+    })
+    it('handles null/undefined old or new', () => {
+      const c = getDefaultConfig()
+      c.radio.h30.enabled = true
+      const lines = hwConfigDiffLines(null, c)
+      expect(lines.length).toBeGreaterThan(0)
+      expect(lines.some(l => l.includes('H30'))).toBe(true)
     })
   })
 })

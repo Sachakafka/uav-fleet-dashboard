@@ -101,6 +101,7 @@ export const db = {
 
     /**
      * Get bookings created by a user (for My Bookings page). Includes vehicle name.
+     * DB column is 'description' (renamed from notes in migration 18).
      */
     async getBookingsByUser(userId) {
         const { data, error } = await supabase
@@ -112,10 +113,10 @@ export const db = {
                 pilot_name,
                 start_time,
                 end_time,
-                who_ordered,
+                requester,
                 location,
                 duration,
-                notes,
+                description,
                 status,
                 created_at,
                 snapshotted_hw_config,
@@ -126,7 +127,8 @@ export const db = {
             .order('start_time', { ascending: false })
 
         if (error) throw error
-        return data || []
+        const list = (data || []).map((row) => ({ ...row, description: row.description }))
+        return list
     },
 
     async createBooking(booking) {
@@ -294,8 +296,10 @@ export const db = {
     async getConflictBooking(vehicleId, startTime, endTime, excludeBookingId = null) {
         let query = supabase
             .from('bookings')
-            .select('id, project_name, pilot_name, start_time, end_time, who_ordered, location, duration, notes, user_id')
+            .select('id, project_name, pilot_name, start_time, end_time, requester, location, duration, description, user_id')
             .eq('vehicle_id', vehicleId)
+            .is('deleted_at', null)
+            .neq('status', 'rejected')
             .lte('start_time', endTime)
             .gte('end_time', startTime)
             .limit(1)
@@ -306,18 +310,21 @@ export const db = {
 
         const { data, error } = await query
         if (error) throw error
-        return data && data[0] ? data[0] : null
+        const row = data && data[0] ? data[0] : null
+        return row ? { ...row, description: row.description } : null
     },
 
     /**
      * Get ALL conflicting bookings with detailed information
-     * Used for enhanced conflict detection UI
+     * Used for enhanced conflict detection UI.
      */
     async getAllConflictingBookings(vehicleId, startTime, endTime, excludeBookingId = null) {
         let query = supabase
             .from('bookings')
-            .select('id, project_name, pilot_name, start_time, end_time, who_ordered, location, duration, notes, user_id')
+            .select('id, project_name, pilot_name, start_time, end_time, requester, location, duration, description, user_id')
             .eq('vehicle_id', vehicleId)
+            .is('deleted_at', null)
+            .neq('status', 'rejected')
             .lte('start_time', endTime)
             .gte('end_time', startTime)
             .order('start_time', { ascending: true })
@@ -328,7 +335,8 @@ export const db = {
 
         const { data, error } = await query
         if (error) throw error
-        return data || []
+        const list = (data || []).map((row) => ({ ...row, description: row.description }))
+        return list
     },
 
     /**
@@ -346,6 +354,152 @@ export const db = {
 
         if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows
         return data
+    },
+
+    //==========================================
+    // Approval & Notifications (Batch 5)
+    //==========================================
+
+    /**
+     * Fetch unread notifications for approval requests (approvers only).
+     * Returns list with notification id, approval_request, booking, vehicle name.
+     * Caller should filter by approval_requests.status === 'pending'.
+     */
+    async getPendingApprovalNotifications() {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select(`
+                id,
+                approval_request_id,
+                created_at,
+                approval_requests (
+                    id,
+                    booking_id,
+                    status,
+                    requested_by,
+                    bookings (
+                        id,
+                        vehicle_id,
+                        project_name,
+                        requester,
+                        start_time,
+                        end_time,
+                        pilot_name,
+                        location,
+                        duration,
+                        description,
+                        risk_level,
+                        vehicles ( name )
+                    )
+                )
+            `)
+            .is('read_at', null)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        const list = (data || []).filter((n) => n.approval_requests && n.approval_requests.status === 'pending')
+        return list.map((n) => ({
+            ...n,
+            approval_requests: n.approval_requests
+                ? {
+                      ...n.approval_requests,
+                      bookings: n.approval_requests.bookings
+                          ? { ...n.approval_requests.bookings, description: n.approval_requests.bookings.description }
+                          : n.approval_requests.bookings
+                  }
+                : n.approval_requests
+        }))
+    },
+
+    /**
+     * Fetch all approval notifications for the Notifications page (approvers only).
+     * Returns pending, approved, and rejected so we can show status and make decided ones unclickable.
+     */
+    async getApprovalNotifications() {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select(`
+                id,
+                approval_request_id,
+                created_at,
+                read_at,
+                approval_requests (
+                    id,
+                    booking_id,
+                    status,
+                    requested_by,
+                    resolved_at,
+                    resolved_by,
+                    bookings (
+                        id,
+                        vehicle_id,
+                        project_name,
+                        requester,
+                        start_time,
+                        end_time,
+                        pilot_name,
+                        location,
+                        duration,
+                        description,
+                        risk_level,
+                        vehicles ( name )
+                    )
+                )
+            `)
+            .order('created_at', { ascending: false })
+
+        if (error) throw error
+        const raw = (data || []).filter((n) => n.approval_requests != null)
+        return raw.map((n) => ({
+            ...n,
+            approval_requests: n.approval_requests
+                ? {
+                      ...n.approval_requests,
+                      bookings: n.approval_requests.bookings
+                          ? { ...n.approval_requests.bookings, description: n.approval_requests.bookings.description }
+                          : n.approval_requests.bookings
+                  }
+                : n.approval_requests
+        }))
+    },
+
+    /**
+     * Approve or reject a pending booking and mark notification read.
+     * @param {string} approvalRequestId - approval_requests.id
+     * @param {'approved'|'rejected'} resolution
+     * @param {string} notificationId - notifications.id (to set read_at)
+     * @param {string} resolvedByUserId - auth.uid()
+     */
+    async resolveApprovalRequest(approvalRequestId, resolution, notificationId, resolvedByUserId) {
+        const bookingStatus = resolution === 'approved' ? 'confirmed' : 'rejected'
+
+        const { data: ar } = await supabase
+            .from('approval_requests')
+            .select('booking_id')
+            .eq('id', approvalRequestId)
+            .single()
+        if (!ar?.booking_id) throw new Error('Approval request not found')
+
+        await supabase
+            .from('bookings')
+            .update({ status: bookingStatus })
+            .eq('id', ar.booking_id)
+
+        await supabase
+            .from('approval_requests')
+            .update({
+                status: resolution,
+                resolved_at: new Date().toISOString(),
+                resolved_by: resolvedByUserId
+            })
+            .eq('id', approvalRequestId)
+
+        if (notificationId) {
+            await supabase
+                .from('notifications')
+                .update({ read_at: new Date().toISOString() })
+                .eq('id', notificationId)
+        }
     }
 }
 

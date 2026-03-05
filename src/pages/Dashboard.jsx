@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../components/Toast'
 import { handleError } from '../lib/errorHandler'
-import db from '../lib/database'
 import VehicleCard from '../components/VehicleCard'
 import BookingModal from '../components/BookingModal'
 import EditVehicleModal from '../components/EditVehicleModal'
@@ -19,6 +18,8 @@ export default function Dashboard() {
     const [vehicles, setVehicles] = useState([])
     const [searchQuery, setSearchQuery] = useState('')
     const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState(null)
+    const [selectedVehicleIds, setSelectedVehicleIds] = useState(null) // null = show all, array = filtered
 
     // Modal States
     const [bookingVehicle, setBookingVehicle] = useState(null)
@@ -30,6 +31,13 @@ export default function Dashboard() {
         fetchVehicles()
     }, [])
 
+    // Refetch when bookings change (e.g. user cancelled in My Bookings) so calendars and next-booking stay in sync
+    useEffect(() => {
+        const onBookingListChanged = () => fetchVehicles()
+        window.addEventListener('booking-list-changed', onBookingListChanged)
+        return () => window.removeEventListener('booking-list-changed', onBookingListChanged)
+    }, [])
+
     // Listen for "Add Vehicle" button click from Header
     useEffect(() => {
         const handleAddVehicle = () => {
@@ -39,9 +47,28 @@ export default function Dashboard() {
         return () => window.removeEventListener('open-add-vehicle-modal', handleAddVehicle)
     }, [])
 
+    // Refetch when vehicles are soft-deleted from Header "Delete Vehicle" flow
+    useEffect(() => {
+        const onVehicleDeleted = (e) => {
+            const count = e.detail?.count ?? 1
+            showSuccess(`${count} vehicle${count !== 1 ? 's' : ''} removed from the fleet.`)
+            fetchVehicles()
+        }
+        const onVehicleDeleteError = (e) => {
+            showError(e.detail?.message ?? 'Failed to delete vehicle(s).')
+        }
+        window.addEventListener('vehicle-deleted', onVehicleDeleted)
+        window.addEventListener('vehicle-delete-error', onVehicleDeleteError)
+        return () => {
+            window.removeEventListener('vehicle-deleted', onVehicleDeleted)
+            window.removeEventListener('vehicle-delete-error', onVehicleDeleteError)
+        }
+    }, [showSuccess, showError])
+
     const fetchVehicles = async () => {
         try {
             setLoading(true)
+            setLoadError(null)
             const { data: vehiclesData, error: vehiclesError } = await supabase
                 .from('vehicles')
                 .select('*')
@@ -65,8 +92,10 @@ export default function Dashboard() {
             const now = new Date().toISOString()
             const { data: bookingsData } = await supabase
                 .from('bookings')
-                .select('id, vehicle_id, start_time, project_name')
+                .select('id, vehicle_id, start_time, project_name, status')
                 .in('vehicle_id', vehicleIds)
+                .is('deleted_at', null)
+                .neq('status', 'rejected')
                 .gte('start_time', now)
                 .order('start_time', { ascending: true })
 
@@ -92,7 +121,9 @@ export default function Dashboard() {
                 userId: user?.id,
                 userEmail: user?.email
             })
-            showError(errorDetails.message)
+            const message = import.meta.env.DEV ? (error.message || errorDetails.message) : errorDetails.message
+            showError(message)
+            setLoadError(message)
             setVehicles([])
         } finally {
             setLoading(false)
@@ -103,40 +134,39 @@ export default function Dashboard() {
         setSearchQuery(e.target.value)
     }
 
-    const filteredVehicles = vehicles.filter(v =>
-        v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.status?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredVehicles = vehicles.filter(v => {
+        // Apply search query filter
+        const matchesSearch = v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            v.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            v.status?.toLowerCase().includes(searchQuery.toLowerCase())
+        
+        // Apply vehicle ID filter (null means show all)
+        const matchesVehicleFilter = selectedVehicleIds === null || selectedVehicleIds.includes(v.id)
+        
+        return matchesSearch && matchesVehicleFilter
+    })
 
-    const handleDeleteVehicle = async (vehicle) => {
-        if (!vehicle?.id) return
-        const confirmed = window.confirm(
-            `Delete vehicle "${vehicle.name}"? This will hide it from the fleet (soft delete). You can restore it from the database if needed.`
-        )
-        if (!confirmed) return
-        try {
-            await db.deleteVehicle(vehicle.id)
-            showSuccess(`Vehicle "${vehicle.name}" has been removed from the fleet.`)
-            fetchVehicles()
-        } catch (error) {
-            console.error('Delete vehicle error:', error)
-            const details = await handleError(error, 'Dashboard.handleDeleteVehicle', { userId: user?.id })
-            showError(details.message)
-        }
+    const handleFilterChange = (vehicleIds) => {
+        setSelectedVehicleIds(vehicleIds)
     }
 
     return (
         <div className="dashboard-container">
-            <Header />
+            <Header 
+                onFilterChange={handleFilterChange}
+                selectedVehicleIds={selectedVehicleIds || []}
+            />
 
             <div className="dashboard-content">
-                <section className="dashboard-fleet-section" aria-label="Fleet vehicles">
-                    <h2 className="dashboard-fleet-title">Fleet</h2>
-                </section>
-                
                 {loading ? (
                     <DashboardSkeleton count={6} />
+                ) : loadError ? (
+                    <div className="dashboard-error-state" style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                        <p style={{ marginBottom: '1rem' }}>Couldn&apos;t load vehicles. {loadError}</p>
+                        <button type="button" className="btn-add-vehicle-header" onClick={() => fetchVehicles()}>
+                            Retry
+                        </button>
+                    </div>
                 ) : (
                     <div className="vehicle-grid fade-in">
                         {filteredVehicles.map(vehicle => (
@@ -146,7 +176,6 @@ export default function Dashboard() {
                                 onEdit={setEditingVehicle}
                                 onBook={setBookingVehicle}
                                 onViewHistory={setChangeHistoryVehicle}
-                                onDelete={handleDeleteVehicle}
                             />
                         ))}
                         {filteredVehicles.length === 0 && (

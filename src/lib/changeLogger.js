@@ -1,15 +1,31 @@
 /**
  * Change Logger Utility
- * 
+ *
  * Logs all changes to vehicles, bookings, and profiles
  * to the change_logs table for audit trail purposes.
+ * Only logs when the user actually saves and when there are real field changes.
  */
 
 import { supabase } from './supabase.js';
+import { normalizeConfig } from './hardwareConfig.js';
+
+/**
+ * Returns true if two values are considered equal for change-detection purposes.
+ * For vehicle hw_config, uses normalized comparison so that equivalent configs
+ * (e.g. { raw: "x" } vs { legacy_text: "x" }) are not counted as changed.
+ */
+function isFieldValueEqual(entityType, fieldName, beforeValue, afterValue) {
+  if (entityType === 'vehicle' && fieldName === 'hw_config') {
+    const beforeNorm = normalizeConfig(beforeValue);
+    const afterNorm = normalizeConfig(afterValue);
+    return JSON.stringify(beforeNorm) === JSON.stringify(afterNorm);
+  }
+  return JSON.stringify(beforeValue) === JSON.stringify(afterValue);
+}
 
 /**
  * Log a change to the change_logs table
- * 
+ *
  * @param {Object} params - Logging parameters
  * @param {string} params.entityType - 'vehicle' | 'booking' | 'profile'
  * @param {string} params.entityId - UUID of the entity
@@ -61,30 +77,26 @@ export async function logChange({
       return;
     }
 
-    // Calculate changed fields for updates
+    // Calculate changed fields for updates; use normalized comparison for hw_config
     let changedFields = null;
-    if (actionType === 'update' && beforeData && afterData) {
+    if (actionType === 'update') {
       changedFields = {};
-      for (const key in afterData) {
-        // Skip metadata fields
-        if (['id', 'created_at', 'updated_at'].includes(key)) continue;
-        
-        // Compare values (use JSON stringify for deep comparison)
-        const beforeValue = beforeData[key];
-        const afterValue = afterData[key];
-        
-        if (JSON.stringify(beforeValue) !== JSON.stringify(afterValue)) {
-          changedFields[key] = {
-            old: beforeValue,
-            new: afterValue
-          };
+      if (beforeData && afterData) {
+        for (const key in afterData) {
+          if (['id', 'created_at', 'updated_at'].includes(key)) continue;
+          const beforeValue = beforeData[key];
+          const afterValue = afterData[key];
+          if (!isFieldValueEqual(entityType, key, beforeValue, afterValue)) {
+            changedFields[key] = { old: beforeValue, new: afterValue };
+          }
         }
       }
-      
-      // If no fields changed, don't log
+      // Do not log update when there are no real changes (e.g. user opened modal and saved without editing)
       if (Object.keys(changedFields).length === 0) {
-        console.log('No fields changed, skipping log');
         return;
+      }
+      if ((!beforeData || !afterData) && notes == null) {
+        notes = 'Update (snapshot incomplete)';
       }
     }
 
@@ -119,6 +131,92 @@ export async function logChange({
     console.error('Exception in logChange:', err);
     // Don't throw - we don't want logging failures to break the app
   }
+}
+
+/**
+ * Group change history so that changes from the same day and same user
+ * are merged into one record. Same day but different users stay separate.
+ *
+ * @param {Array} entries - Raw change log entries (newest first from getChangeHistory)
+ * @returns {Array} Grouped entries, one per (calendar day, user) per entity
+ */
+export function groupChangeHistoryByDayAndUser(entries) {
+  if (!entries || entries.length === 0) return []
+
+  // Use UTC date for "same day" so all timezones are consistent
+  const toDateKey = (createdAt) => {
+    const d = new Date(createdAt)
+    return d.toISOString().slice(0, 10) // YYYY-MM-DD
+  }
+
+  const groupKey = (entry) => `${toDateKey(entry.created_at)}-${entry.user_id || 'anonymous'}`
+
+  const groups = new Map()
+
+  for (const entry of entries) {
+    const key = groupKey(entry)
+    if (!groups.has(key)) {
+      groups.set(key, [])
+    }
+    groups.get(key).push(entry)
+  }
+
+  // Within each group, sort by created_at ascending (earliest first) for merge
+  const result = []
+  for (const [, groupEntries] of groups) {
+    groupEntries.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+
+    const first = groupEntries[0]
+    const last = groupEntries[groupEntries.length - 1]
+
+    // Merge changed_fields: for each field, old from first change, new from last change
+    let mergedChangedFields = null
+    const allChangedFields = groupEntries.map((e) => e.changed_fields).filter(Boolean)
+    if (allChangedFields.length > 0) {
+      mergedChangedFields = {}
+      for (const cf of allChangedFields) {
+        for (const [field, values] of Object.entries(cf)) {
+          if (!mergedChangedFields[field]) {
+            mergedChangedFields[field] = { old: values.old, new: values.new }
+          } else {
+            mergedChangedFields[field].new = values.new
+          }
+        }
+      }
+    }
+
+    // Action type: delete > create > update
+    let actionType = 'update'
+    for (const e of groupEntries) {
+      if (e.action_type === 'delete') {
+        actionType = 'delete'
+        break
+      }
+      if (e.action_type === 'create') actionType = 'create'
+    }
+
+    const notesList = groupEntries.map((e) => e.notes).filter(Boolean)
+    const notes = notesList.length > 0 ? notesList.join(' | ') : null
+
+    result.push({
+      ...last,
+      id: last.id,
+      created_at: last.created_at,
+      user_id: last.user_id,
+      user_email: last.user_email,
+      user_display_name: last.user_display_name,
+      action_type: actionType,
+      changed_fields: mergedChangedFields,
+      before_snapshot: first.before_snapshot,
+      after_snapshot: last.after_snapshot,
+      notes: notes || last.notes,
+      _count: groupEntries.length
+    })
+  }
+
+  // Sort by created_at descending (newest first)
+  result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  return result
 }
 
 /**

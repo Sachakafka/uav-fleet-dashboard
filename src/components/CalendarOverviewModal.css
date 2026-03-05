@@ -64,21 +64,21 @@
   line-height: 1;
 }
 
-.calendar-overview-title-wrap {
-  flex: 1;
-}
-
-.calendar-overview-title-wrap h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+.calendar-view-toggle-btn {
+  padding: 0.5rem 1rem;
+  background: var(--bg-card, #162032);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 8px;
   color: var(--text-primary, #f1f5f9);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
 }
 
-.calendar-overview-subtitle {
-  margin: 0.25rem 0 0;
-  font-size: 0.875rem;
-  color: var(--text-secondary, #94a3b8);
+.calendar-view-toggle-btn:hover {
+  background: #334155;
+  border-color: #475569;
 }
 
 .calendar-overview-close {
@@ -124,6 +124,12 @@
   border-color: #475569;
 }
 
+.calendar-overview-controls button.calendar-view-active {
+  background: var(--primary-color, #2563eb);
+  border-color: var(--primary-color, #2563eb);
+  color: #fff;
+}
+
 .calendar-month-title {
   font-size: 1.15rem;
   font-weight: 600;
@@ -163,6 +169,12 @@
   animation: calendarFadeIn 0.25s ease;
 }
 
+/* Weekly view: single row of 7 days */
+.calendar-overview-grid-weekly {
+  grid-template-rows: auto 1fr;
+  min-height: 200px;
+}
+
 .calendar-day-header {
   padding: 0.5rem 0.25rem;
   font-size: 0.8rem;
@@ -190,7 +202,9 @@
 
 .calendar-day-cell.today {
   border-color: var(--primary-color, #2563eb);
-  background: rgba(37, 99, 235, 0.15);
+  border-width: 2px;
+  background: rgba(37, 99, 235, 0.25);
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.4);
 }
 
 .calendar-day-cell.has-bookings {
@@ -210,7 +224,7 @@
   display: none;
 }
 
-/* 至少顯示兩筆預約：固定兩行高度，多出的可捲動 */
+/* Show at least two bookings: fixed two-row height, rest scrollable */
 .calendar-day-bookings {
   display: flex;
   flex-direction: column;
@@ -233,7 +247,7 @@
   min-height: 18px;
 }
 
-/* 單行：車名 · 專案名，一眼看完 */
+/* Single line: vehicle name · project name */
 .booking-chip-line {
   display: block;
   white-space: nowrap;
@@ -257,7 +271,13 @@
   font-weight: 400;
 }
 
-/* 超過兩筆時顯示 "+N" 提示 */
+.calendar-booking-chip .booking-pending-badge {
+  color: var(--amber-400, #f59e0b);
+  font-weight: 600;
+  font-size: 0.75em;
+}
+
+/* "+N" when more than two bookings */
 .calendar-day-more {
   font-size: 0.65rem;
   color: var(--text-secondary, #94a3b8);

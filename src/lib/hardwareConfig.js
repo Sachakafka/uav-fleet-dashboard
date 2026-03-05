@@ -244,3 +244,115 @@ export function isEmptyConfig(config) {
   const text = hardwareConfigToText(c)
   return !text || text.trim() === ''
 }
+
+/** Human-readable labels for hardware config keys (for change history diff). */
+const HW_LABELS = {
+  radio: {
+    h30: 'H30',
+    silvus: 'Silvus',
+    radioNor: 'RadioNor',
+    custom: 'Custom'
+  },
+  frequencyBand: { s: 'S-Band', c: 'C-Band', l: 'L-Band', custom: 'Custom' },
+  visualNavigation: { yes: 'Yes', no: 'No', boson: 'Boson' },
+  gps: {
+    holyBro: 'Holybro',
+    hardenGps: 'Harden GPS',
+    arcXL: 'ARC_XL',
+    arcX20: 'Arc (x20)',
+    custom: 'Custom'
+  }
+}
+
+/**
+ * Describe a single radio/gps item state for diff output.
+ * @param {Object} item - { enabled, value? }
+ * @returns {string}
+ */
+function itemState(item) {
+  if (!item || typeof item !== 'object') return 'disabled'
+  if (item.enabled === true) {
+    const v = (item.value || '').trim()
+    return v ? `enabled (${v})` : 'enabled'
+  }
+  return 'disabled'
+}
+
+/**
+ * Diff two hardware configs and return human-readable change lines.
+ * Used by Change History to show exactly which hw_config items changed.
+ * @param {unknown} oldConfig - Raw old value (from changed_fields.hw_config.old)
+ * @param {unknown} newConfig - Raw new value (from changed_fields.hw_config.new)
+ * @returns {string[]} Lines like "Radio: H30 enabled → disabled", "Frequency: S-Band → C-Band"
+ */
+export function hwConfigDiffLines(oldConfig, newConfig) {
+  const oldC = normalizeConfig(oldConfig)
+  const newC = normalizeConfig(newConfig)
+  const lines = []
+
+  // Radio: h30, silvus, radioNor, custom
+  const radioKeys = ['h30', 'silvus', 'radioNor', 'custom']
+  for (const key of radioKeys) {
+    const oldItem = oldC.radio?.[key]
+    const newItem = newC.radio?.[key]
+    const oldState = itemState(oldItem)
+    const newState = itemState(newItem)
+    if (oldState !== newState) {
+      const label = HW_LABELS.radio[key] || key
+      lines.push(`Radio: ${label} ${oldState} → ${newState}`)
+    }
+  }
+
+  // Frequency: s, c, l, custom
+  const bandKeys = ['s', 'c', 'l']
+  const oldBands = []
+  const newBands = []
+  for (const k of bandKeys) {
+    if (oldC.frequencyBand?.[k]) oldBands.push(HW_LABELS.frequencyBand[k])
+    if (newC.frequencyBand?.[k]) newBands.push(HW_LABELS.frequencyBand[k])
+  }
+  const oldCustom = (oldC.frequencyBand?.custom ?? '').trim()
+  const newCustom = (newC.frequencyBand?.custom ?? '').trim()
+  if (oldCustom) oldBands.push(oldCustom)
+  if (newCustom) newBands.push(newCustom)
+  const oldBandStr = oldBands.length ? oldBands.join(', ') : '(none)'
+  const newBandStr = newBands.length ? newBands.join(', ') : '(none)'
+  if (oldBandStr !== newBandStr) {
+    lines.push(`Frequency: ${oldBandStr} → ${newBandStr}`)
+  }
+
+  // Visual navigation: yes, no, boson
+  const vnKeys = ['yes', 'no', 'boson']
+  for (const key of vnKeys) {
+    const oldVal = !!oldC.visualNavigation?.[key]
+    const newVal = !!newC.visualNavigation?.[key]
+    if (oldVal !== newVal) {
+      const label = HW_LABELS.visualNavigation[key]
+      const oldStr = oldVal ? 'enabled' : 'disabled'
+      const newStr = newVal ? 'enabled' : 'disabled'
+      lines.push(`Visual Nav: ${label} ${oldStr} → ${newStr}`)
+    }
+  }
+
+  // GPS: holyBro, hardenGps, arcXL, arcX20, custom
+  const gpsKeys = ['holyBro', 'hardenGps', 'arcXL', 'arcX20', 'custom']
+  for (const key of gpsKeys) {
+    const oldItem = oldC.gps?.[key]
+    const newItem = newC.gps?.[key]
+    const oldState = itemState(oldItem)
+    const newState = itemState(newItem)
+    if (oldState !== newState) {
+      const label = HW_LABELS.gps[key] || key
+      lines.push(`GPS: ${label} ${oldState} → ${newState}`)
+    }
+  }
+
+  // Legacy text change
+  const oldLegacy = (oldC.legacy_text ?? '').trim()
+  const newLegacy = (newC.legacy_text ?? '').trim()
+  if (oldLegacy !== newLegacy) {
+    lines.push(`Legacy: "${oldLegacy || '(empty)'}" → "${newLegacy || '(empty)'}"`)
+  }
+
+  return lines
+}

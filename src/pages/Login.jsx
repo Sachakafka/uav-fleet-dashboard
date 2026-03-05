@@ -2,8 +2,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-// Feature flag: Set to true to enable email/password authentication（無需 Google Cloud Console，適合內部測試）
-const ENABLE_EMAIL_AUTH = true  // 已啟用：可用信箱+密碼登入，不依賴 Google OAuth
+// Feature flag: Set to true to enable email/password authentication (no Google Cloud Console needed; suitable for internal testing)
+const ENABLE_EMAIL_AUTH = true  // Enabled: sign in with email+password without Google OAuth
 // Show email form when running E2E with test credentials (playwright sets VITE_E2E_EMAIL_AUTH)
 const SHOW_EMAIL_AUTH_FOR_E2E = import.meta.env.VITE_E2E_EMAIL_AUTH === 'true' || import.meta.env.VITE_E2E_EMAIL_AUTH === '1'
 

@@ -6,20 +6,20 @@ No code here — only workflow and checklist.
 
 ## 1. Next step (what to do now)
 
-**順序：** Staging 部署 → Staging UAT 簽核 → 打 tag 並從 tag 部署 production；Rollback = 重新部署上一個 tag。  
-**詳細步驟：** 見 **`docs/STAGING_DEPLOY_STEPS.md`**（含 Vercel/Netlify 操作、PRD §5 UAT、tag 與 rollback）。
+**Order:** Deploy to Staging → Staging UAT sign-off → tag and deploy production from tag; Rollback = redeploy the previous tag.  
+**Detailed steps:** See **`docs/DEPLOY_Staging_Steps.md`** (Vercel/Netlify setup, PRD §5 UAT, tagging, rollback).
 
-1. **Staging 部署**  
-   在 Vercel 或 Netlify 連此 repo 建立專案，設定 `VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`，部署後取得 Staging URL。
+1. **Deploy to Staging**  
+   In Vercel or Netlify, connect this repo, set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, deploy and get the Staging URL.
 
-2. **Staging UAT（PRD §5）**  
-   在 Staging URL 上跑四項：Isolation、Shared Pool、Snapshot、Conflict。四項都過再往下。簽核表：`docs/UAT_SIGN_OFF_SUNDAY.md`。
+2. **Staging UAT (PRD §5)**  
+   On the Staging URL run the four checks: Isolation, Shared Pool, Snapshot, Conflict. Proceed only when all four pass. Sign-off checklist: `docs/UAT_SIGN_OFF_SUNDAY.md` (if present).
 
-3. **正式發布**  
-   UAT 通過後：打 tag（例如 `v1.0.0`）、push tag、用該 tag 做 production 部署（不要用 branch 直接 deploy）。
+3. **Production release**  
+   After UAT passes: create tag (e.g. `v1.0.0`), push tag, deploy production from that tag (do not deploy production directly from a branch).
 
 4. **Rollback**  
-   重新部署上一個 tag（例如 v0.9.0）。見 `docs/STAGING_DEPLOY_STEPS.md` §3.3。
+   Redeploy the previous tag (e.g. v0.9.0). See `docs/DEPLOY_Staging_Steps.md` §3.3.
 
 ---
 
@@ -129,7 +129,7 @@ Keep: **DB done → staging → tests green → UAT on staging → tag → prod 
 | Action | Where | Why |
 |--------|--------|-----|
 | **Get connection string** | Project Settings → Database → Connection string (URI) | Required for `DATABASE_URL` in `.env` so `npm run db:migrate:all` works. |
-| **Run migrations** | Either: (1) set `DATABASE_URL` and run `npm run db:migrate:all`, or (2) SQL Editor — paste and run `db/01_schema_fixes.sql`, then `03`, `04`, `05`, `06` in order | Schema + RLS + snapshot trigger must be applied once per project. See `docs/DATABASE_SETUP.md`. |
+| **Run migrations** | Either: (1) set `DATABASE_URL` and run `npm run db:migrate:all`, or (2) SQL Editor — paste and run `db/01_schema_fixes.sql`, then `03`, `04`, `05`, `06` in order | Schema + RLS + snapshot trigger must be applied once per project. See `docs/DEV_Database_Setup.md`. |
 | **Confirm RLS** | Table Editor or SQL: `vehicles`, `bookings`, `profiles` have RLS enabled; policies in `06_department_rls.sql` | Ensures department-based visibility (Marketing vs R&D/Training). |
 | **Test users (UAT)** | Authentication → Users, or create via app sign-in | You need at least: one user with department **Marketing**, one with **R&D** (or **Training**) to run PRD §5: Isolation + Shared Pool. |
 | **Optional: reset DB password** | Project Settings → Database → Reset database password | Only if you don’t have the password for the connection string. |

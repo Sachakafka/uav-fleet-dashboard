@@ -1,10 +1,10 @@
 -- ==========================================
--- Phase 0 驗證查詢
--- 在 Supabase SQL Editor 執行這些查詢來確認遷移成功
+-- Phase 0 verification queries
+-- Run these in Supabase SQL Editor to confirm migration success
 -- ==========================================
 
--- ===== 驗證 1: 檢查 vehicles 表結構 =====
--- 預期: 應該有 deleted_at，但沒有 risk_level
+-- ===== Verify 1: vehicles table structure =====
+-- Expected: has deleted_at, no risk_level
 SELECT 
   column_name,
   data_type,
@@ -13,8 +13,8 @@ FROM information_schema.columns
 WHERE table_name = 'vehicles'
 ORDER BY ordinal_position;
 
--- ===== 驗證 2: 檢查 bookings 表結構 =====
--- 預期: 應該同時有 risk_level 和 deleted_at
+-- ===== Verify 2: bookings table structure =====
+-- Expected: has both risk_level and deleted_at
 SELECT 
   column_name,
   data_type,
@@ -23,13 +23,13 @@ FROM information_schema.columns
 WHERE table_name = 'bookings'
 ORDER BY ordinal_position;
 
--- ===== 驗證 3: 確認 change_logs 表存在 =====
--- 預期: 回傳 1
+-- ===== Verify 3: change_logs table exists =====
+-- Expected: returns 1
 SELECT COUNT(*) as change_logs_exists
 FROM information_schema.tables 
 WHERE table_name = 'change_logs';
 
--- ===== 驗證 4: 檢查 change_logs 表結構 =====
+-- ===== Verify 4: change_logs table structure =====
 SELECT 
   column_name,
   data_type
@@ -37,8 +37,8 @@ FROM information_schema.columns
 WHERE table_name = 'change_logs'
 ORDER BY ordinal_position;
 
--- ===== 驗證 5: 確認索引已建立 =====
--- 預期: 至少 3 個索引 (不含主鍵)
+-- ===== Verify 5: indexes created =====
+-- Expected: at least 3 indexes (excluding primary key)
 SELECT 
   indexname,
   indexdef
@@ -46,8 +46,8 @@ FROM pg_indexes
 WHERE tablename = 'change_logs'
 ORDER BY indexname;
 
--- ===== 驗證 6: 檢查 RLS 政策 =====
--- 預期: vehicles, bookings, change_logs 都有政策
+-- ===== Verify 6: RLS policies =====
+-- Expected: vehicles, bookings, change_logs all have policies
 SELECT 
   tablename,
   policyname,
@@ -56,14 +56,14 @@ FROM pg_policies
 WHERE tablename IN ('vehicles', 'bookings', 'change_logs')
 ORDER BY tablename, policyname;
 
--- ===== 驗證 7: 計算活躍載具數量 =====
--- 預期: 7 台載具 (deleted_at IS NULL)
+-- ===== Verify 7: active vehicle count =====
+-- Expected: N vehicles (deleted_at IS NULL)
 SELECT COUNT(*) as active_vehicles
 FROM vehicles
 WHERE deleted_at IS NULL;
 
--- ===== 驗證 8: 檢查是否有被軟刪除的記錄 =====
--- 預期: 0 (沒有被刪除的記錄)
+-- ===== Verify 8: soft-deleted rows =====
+-- Expected: 0 (no deleted rows)
 SELECT 
   'vehicles' as table_name,
   COUNT(*) as deleted_count
@@ -76,8 +76,8 @@ SELECT
 FROM bookings
 WHERE deleted_at IS NOT NULL;
 
--- ===== 驗證 9: 測試 change_logs 插入 =====
--- 這會插入一筆測試記錄
+-- ===== Verify 9: test change_logs insert =====
+-- Inserts one test row
 INSERT INTO change_logs (
   user_email,
   user_display_name,
@@ -96,7 +96,7 @@ INSERT INTO change_logs (
   'Phase 0 verification test - safe to delete'
 );
 
--- ===== 驗證 10: 查詢剛插入的測試記錄 =====
+-- ===== Verify 10: query the test row =====
 SELECT 
   id,
   created_at,
@@ -109,10 +109,10 @@ WHERE notes = 'Phase 0 verification test - safe to delete'
 ORDER BY created_at DESC
 LIMIT 1;
 
--- ===== 清理測試記錄 =====
+-- ===== Clean up test row =====
 DELETE FROM change_logs
 WHERE notes = 'Phase 0 verification test - safe to delete';
 
 -- ==========================================
--- ✅ 如果以上查詢都成功執行，Phase 0 遷移完全成功！
+-- If all queries run successfully, Phase 0 migration is complete.
 -- ==========================================

@@ -1,15 +1,16 @@
-# 🚨 立即修復 OAuth 無限迴圈 - 3 分鐘搞定
+# OAuth Redirect Loop — Quick Fix (3 minutes)
 
-## ⚡ 第 1 步：Supabase Dashboard（最重要！）
+## Step 1: Supabase Dashboard (most important)
 
-1. 打開這個連結：
+1. Open:
    ```
    https://app.supabase.com/project/citoiconzejdfjjefnbi/auth/url-configuration
    ```
+   (Replace the project ID with yours if different.)
 
-2. 找到 **Redirect URLs** 區塊
+2. Find the **Redirect URLs** section.
 
-3. 複製貼上這些 URLs（一次全部貼上，用換行分隔）：
+3. Paste these URLs (one per line):
    ```
    http://localhost:5173
    http://localhost:5173/
@@ -19,77 +20,74 @@
    https://uav-fleet-dashboard-git-main-alexs-projects-043bd484.vercel.app/
    ```
 
-4. 點擊 **Save** 按鈕（非常重要！）
+4. Click **Save** (important).
 
-5. 確認 **Site URL** 是：
+5. Confirm **Site URL** is:
    ```
    https://uav-fleet-dashboard.vercel.app
    ```
 
-## ⚡ 第 2 步：等待 Vercel 部署
+## Step 2: Wait for Vercel deploy
 
-程式碼已經推送，Vercel 會自動部署（約 1-2 分鐘）
+Code is already pushed; Vercel will deploy automatically (about 1–2 minutes).
 
-查看部署狀態：
+Check deploy status:
 ```
 https://vercel.com/alexs-projects-043bd484/uav-fleet-dashboard
 ```
 
-## ⚡ 第 3 步：測試
+## Step 3: Test
 
-1. **清除瀏覽器資料**（重要！）
-   - 按 F12 打開 DevTools
+1. **Clear browser data** (important)
+   - Press F12 to open DevTools
    - Application → Storage → Clear site data
-   - 或使用無痕模式
+   - Or use an incognito/private window
 
-2. **訪問你的網站**
+2. **Open your site**
    ```
    https://uav-fleet-dashboard.vercel.app
    ```
 
-3. **點擊 "Sign in with Google"**
+3. Click **Sign in with Google**
 
-4. **應該成功登入！** 🎉
+4. You should be signed in successfully.
 
-## ❌ 如果還是不行
+## If it still fails
 
-### 檢查 1：Supabase Redirect URLs 是否保存成功？
-- 重新打開 Supabase URL Configuration 頁面
-- 確認所有 URLs 都在列表中
-- 如果沒有，重新添加並**確實點擊 Save**
+### Check 1: Did Supabase save the Redirect URLs?
+- Reopen Supabase URL Configuration.
+- Confirm all URLs are in the list.
+- If not, add them again and click **Save**.
 
-### 檢查 2：Vercel 部署是否完成？
-- 打開 Vercel dashboard
-- 確認最新的 commit `24e0573` 已經部署
-- Status 應該是 "Ready"
+### Check 2: Is the Vercel deploy finished?
+- Open the Vercel dashboard.
+- Confirm the latest commit is deployed.
+- Status should be "Ready".
 
-### 檢查 3：瀏覽器 Console 有什麼錯誤？
-- 按 F12 打開 DevTools
-- 切換到 Console tab
-- 截圖錯誤訊息給我看
+### Check 3: What does the browser Console show?
+- Press F12 → Console tab.
+- Share the error message or a screenshot.
 
-## 📞 需要幫助？
+## Need help?
 
-如果上述步驟都完成了還是不行，請提供：
-1. Supabase Redirect URLs 的截圖
-2. Vercel 部署狀態的截圖
-3. 瀏覽器 Console 的錯誤訊息
+If you followed all steps and it still fails, provide:
+1. A screenshot of Supabase Redirect URLs.
+2. A screenshot of Vercel deploy status.
+3. The browser Console error message.
 
 ---
 
-## 🔍 為什麼會這樣？
+## Why does this happen?
 
-簡單來說：
-1. Google OAuth 登入後會重定向回你的網站
-2. Supabase 需要知道哪些 URLs 是允許的
-3. 如果 URL 不在白名單中，就會一直重定向
-4. 我們剛剛把 Vercel 的 URLs 加入白名單了
+In short:
+1. After Google OAuth, the user is redirected back to your site.
+2. Supabase only allows redirects to URLs in its allow list.
+3. If the URL is not in the list, redirects can loop.
+4. Adding the Vercel URLs to the list fixes it.
 
-## ✅ 完成後的狀態
+## When it’s working
 
-- ✅ 可以用 Google 登入
-- ✅ 登入後停留在 Dashboard
-- ✅ 重新整理頁面後仍保持登入
-- ✅ 可以正常登出
-
-加油！你快成功了！💪
+- You can sign in with Google.
+- After sign-in you stay on the Dashboard.
+- Refreshing the page keeps you signed in.
+- Sign out works as expected.

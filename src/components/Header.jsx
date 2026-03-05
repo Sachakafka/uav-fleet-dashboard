@@ -2,28 +2,43 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import CalendarOverviewModal from './CalendarOverviewModal'
+import FilterModal from './FilterModal'
+import DeleteVehicleModal from './DeleteVehicleModal'
+import FilterFunnelIcon from './FilterFunnelIcon'
 import logoSrc from '../assets/logo.png'
+import { isApprover } from '../lib/approvers'
+import db from '../lib/database'
 
-export default function Header({ title }) {
+export default function Header({ title, onFilterChange, selectedVehicleIds = [] }) {
     const { user, role, signOut } = useAuth()
     const [showMenu, setShowMenu] = useState(false)
-    const [showSearch, setShowSearch] = useState(false)
     const [showCalendarModal, setShowCalendarModal] = useState(false)
+    const [showFilterModal, setShowFilterModal] = useState(false)
+    const [showDeleteVehicleModal, setShowDeleteVehicleModal] = useState(false)
+    const [pendingNotificationCount, setPendingNotificationCount] = useState(0)
     const menuRef = useRef(null)
     const navigate = useNavigate()
 
-    // Close menu when clicking outside
+    const approver = isApprover(user?.email)
+
     useEffect(() => {
-        function handleClickOutside(event) {
-            if (menuRef.current && !menuRef.current.contains(event.target)) {
-                setShowMenu(false)
-            }
+        if (!approver) return
+        let cancelled = false
+        const fetch = () =>
+            db.getPendingApprovalNotifications()
+                .then((list) => { if (!cancelled) setPendingNotificationCount(list.length) })
+                .catch(() => { if (!cancelled) setPendingNotificationCount(0) })
+        fetch()
+        return () => { cancelled = true }
+    }, [approver])
+
+    useEffect(() => {
+        if (approver && showMenu) {
+            db.getPendingApprovalNotifications()
+                .then((list) => setPendingNotificationCount(list.length))
+                .catch(() => {})
         }
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside)
-        }
-    }, [])
+    }, [approver, showMenu])
 
     const handleLogout = async () => {
         await signOut()
@@ -43,11 +58,19 @@ export default function Header({ title }) {
     }
 
     const handleAddVehicle = () => {
-        // Trigger generic add action - in real app would open modal
-        // For now we might need to pass this down or just alert
         const evt = new CustomEvent('open-add-vehicle-modal')
         window.dispatchEvent(evt)
     }
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowMenu(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     const initial = user?.email ? user.email[0].toUpperCase() : '?'
 
@@ -64,32 +87,30 @@ export default function Header({ title }) {
 
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
 
-                {/* Search (Hidden in reference but user asked for it earlier, keeping it subtle) */}
-                {showSearch ? (
-                    <input
-                        type="text"
-                        className="search-input-header"
-                        placeholder="Search..."
-                        autoFocus
-                        onBlur={(e) => !e.target.value && setShowSearch(false)}
-                    />
-                ) : (
-                    <div className="icon-btn-header" onClick={() => setShowSearch(true)} title="Search">
-                        🔍
-                    </div>
-                )}
-
-                {/* Calendar Button — visible text + test id so E2E and a11y can find it */}
+                {/* Filter button */}
                 <button
                     type="button"
                     className="icon-btn-header icon-btn-header-with-label"
-                    aria-label="Calendar Overview"
-                    title="Calendar Overview"
-                    data-testid="calendar-overview-trigger"
+                    aria-label="Filter"
+                    title="Filter Vehicles"
+                    data-testid="filter-trigger"
+                    onClick={() => setShowFilterModal(true)}
+                >
+                    <FilterFunnelIcon size={18} color="currentColor" />
+                    <span className="filter-btn-label">Filter</span>
+                </button>
+
+                {/* Schedule button — visible text + test id for E2E and a11y */}
+                <button
+                    type="button"
+                    className="icon-btn-header icon-btn-header-with-label"
+                    aria-label="Schedule"
+                    title="Schedule"
+                    data-testid="schedule-trigger"
                     onClick={() => setShowCalendarModal(true)}
                 >
                     <span aria-hidden="true">📅</span>
-                    <span className="calendar-btn-label">Calendar Overview</span>
+                    <span className="calendar-btn-label">Schedule</span>
                 </button>
 
                 {/* Add Vehicle Button (Ref match) */}
@@ -115,18 +136,28 @@ export default function Header({ title }) {
                                 <span className="user-email">{user?.email}</span>
                             </div>
                             <button className="profile-menu-item" onClick={handleProfileClick}>👤 Profile Page</button>
+                            <button
+                                className={`profile-menu-item ${pendingNotificationCount > 0 ? 'profile-menu-item-notifications-pending' : ''}`}
+                                onClick={() => { navigate('/notifications'); setShowMenu(false); }}
+                            >
+                                🔔 Notifications
+                                {pendingNotificationCount > 0 && (
+                                    <span className="profile-menu-item-badge" aria-label={`${pendingNotificationCount} pending`}>
+                                        ({pendingNotificationCount})
+                                    </span>
+                                )}
+                            </button>
                             <button className="profile-menu-item" onClick={() => { navigate('/my-bookings'); setShowMenu(false); }}>
                                 📋 My Bookings
                             </button>
-                            <button
-                                className="profile-menu-item"
-                                onClick={() => {
-                                    alert('Change Log feature - Design TBD\n\nThis will show a comprehensive history of all system changes.')
-                                    setShowMenu(false)
-                                }}
-                            >
-                                📜 Change Log
-                            </button>
+                            {role === 'admin' && (
+                                <button
+                                    className="profile-menu-item"
+                                    onClick={() => { setShowDeleteVehicleModal(true); setShowMenu(false); }}
+                                >
+                                    🗑 Delete Vehicle
+                                </button>
+                            )}
                             <button
                                 className={`profile-menu-item ${role === 'admin' ? '' : 'disabled'}`}
                                 onClick={handleAdminClick}
@@ -143,6 +174,18 @@ export default function Header({ title }) {
 
             {showCalendarModal && (
                 <CalendarOverviewModal onClose={() => setShowCalendarModal(false)} />
+            )}
+
+            {showFilterModal && (
+                <FilterModal
+                    onClose={() => setShowFilterModal(false)}
+                    onApplyFilter={onFilterChange}
+                    initialSelectedVehicles={selectedVehicleIds}
+                />
+            )}
+
+            {showDeleteVehicleModal && (
+                <DeleteVehicleModal onClose={() => setShowDeleteVehicleModal(false)} />
             )}
         </header>
     )

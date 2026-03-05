@@ -83,20 +83,33 @@ function getUserFriendlyMessage(error, category) {
         return error.userMessage
     }
 
+    const message = error.message?.toLowerCase() || ''
+    const code = (error.code || '').toLowerCase()
+
+    // RLS / permission denied (often from Supabase with message about row-level security)
+    const isRlsOrPermission =
+        message.includes('row-level security') ||
+        message.includes('violates') ||
+        message.includes('policy') ||
+        code === '42501' // insufficient_privilege
+
     // Category-based messages
     switch (category) {
         case ErrorCategory.NETWORK:
             return 'Network error. Please check your connection and try again.'
-        
+
         case ErrorCategory.AUTH:
             return 'Authentication error. Please sign in again.'
-        
+
         case ErrorCategory.DATABASE:
+            if (isRlsOrPermission) {
+                return "You don't have permission to create this booking. Your account may need Editor or Admin role and access to this vehicle's department."
+            }
             return 'Database error. Please try again or contact support.'
-        
+
         case ErrorCategory.VALIDATION:
             return error.message || 'Please check your input and try again.'
-        
+
         default:
             return 'An unexpected error occurred. Please try again.'
     }

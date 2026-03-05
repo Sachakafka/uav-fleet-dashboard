@@ -8,6 +8,16 @@ import { normalizeConfig, hardwareConfigToText } from '../lib/hardwareConfig'
 import HardwareConfigModal from './HardwareConfigModal'
 import './EditVehicleModal.css'
 
+const ALLOWED_STATUSES = ['Available', 'Maintenance']
+
+function normalizeStatus(status) {
+    if (!status) return 'Available'
+    const s = status.trim()
+    if (ALLOWED_STATUSES.includes(s)) return s
+    if (s.toLowerCase().includes('mission') || s.toLowerCase().includes('ready')) return 'Available'
+    return 'Available'
+}
+
 export default function EditVehicleModal({ vehicle, onClose, onSave }) {
     const { user, displayName } = useAuth()
     const { showSuccess, showError } = useToast()
@@ -15,9 +25,11 @@ export default function EditVehicleModal({ vehicle, onClose, onSave }) {
 
     const [formData, setFormData] = useState({
         name: vehicle?.name || '',
-        status: vehicle?.status || 'Available',
+        status: normalizeStatus(vehicle?.status),
+        department: vehicle?.department || 'R&D',
         hw_config: normalizeConfig(vehicle?.hw_config ?? null),
         sw_version: vehicle?.sw_version || '',
+        parameter_change_notes: vehicle?.parameter_change_notes || '',
         notes: vehicle?.notes || ''
     })
     const [showHwConfigModal, setShowHwConfigModal] = useState(false)
@@ -51,6 +63,10 @@ export default function EditVehicleModal({ vehicle, onClose, onSave }) {
         
         if (!formData.status) {
             errors.status = 'Status is required'
+        }
+        
+        if (!formData.department) {
+            errors.department = 'Department is required'
         }
         
         setValidationErrors(errors)
@@ -88,10 +104,18 @@ export default function EditVehicleModal({ vehicle, onClose, onSave }) {
             const payload = {
                 name: formData.name,
                 status: formData.status,
+                department: formData.department,
                 hw_config: hwConfigValue,
                 sw_version: formData.sw_version,
                 notes: formData.notes
             }
+            
+            // Only include parameter_change_notes if it has a value (optional field)
+            // This allows the app to work even if the DB column doesn't exist yet
+            if (formData.parameter_change_notes && formData.parameter_change_notes.trim() !== '') {
+                payload.parameter_change_notes = formData.parameter_change_notes
+            }
+            
             if (!isNew) payload.id = vehicle.id
 
             const { data, error } = await supabase
@@ -198,9 +222,32 @@ export default function EditVehicleModal({ vehicle, onClose, onSave }) {
                         )}
                     </div>
 
+                    {/* Department */}
+                    <div className="edit-form-group">
+                        <label>Department *</label>
+                        <div className="edit-select-wrapper">
+                            <select 
+                                name="department" 
+                                value={formData.department} 
+                                onChange={handleChange}
+                                required
+                                className={validationErrors.department ? 'error' : ''}
+                                aria-invalid={!!validationErrors.department}
+                                aria-describedby={validationErrors.department ? 'department-error' : undefined}
+                            >
+                                <option value="R&D">R&D</option>
+                                <option value="Training">Training</option>
+                                <option value="Marketing">Marketing</option>
+                            </select>
+                        </div>
+                        {validationErrors.department && (
+                            <span id="department-error" className="validation-error">{validationErrors.department}</span>
+                        )}
+                    </div>
+
                     {/* Status */}
                     <div className="edit-form-group">
-                        <label>Status *</label>
+                        <label>Status</label>
                         <div className="edit-select-wrapper">
                             <select 
                                 name="status" 
@@ -211,9 +258,7 @@ export default function EditVehicleModal({ vehicle, onClose, onSave }) {
                                 aria-describedby={validationErrors.status ? 'status-error' : undefined}
                             >
                                 <option value="Available">✓ Available</option>
-                                <option value="Mission">🚀 On Mission</option>
                                 <option value="Maintenance">⚠️ Maintenance</option>
-                                <option value="Decommissioned">🚫 Decommissioned</option>
                             </select>
                         </div>
                         {validationErrors.status && (
@@ -259,6 +304,18 @@ export default function EditVehicleModal({ vehicle, onClose, onSave }) {
                             value={formData.sw_version}
                             onChange={handleChange}
                             placeholder="e.g. v2.0.4"
+                        />
+                    </div>
+
+                    {/* Parameter Change */}
+                    <div className="edit-form-group">
+                        <label>Parameter Change</label>
+                        <textarea
+                            name="parameter_change_notes"
+                            value={formData.parameter_change_notes}
+                            onChange={handleChange}
+                            rows="3"
+                            placeholder="Document any parameter changes made to this vehicle..."
                         />
                     </div>
 

@@ -58,7 +58,7 @@ If both are correct, the bug fixes are verified.
   - **Unauthenticated:** `e2e/app.spec.js` — redirect to login, Sign In page, Google sign-in button, no dashboard content.
   - **Authenticated:** `e2e/dashboard.spec.js` — dashboard, Book modal, Calendar (skipped unless `E2E_AUTH_EMAIL` and `E2E_AUTH_PASSWORD` are set; see `.env.example`). When set, the app shows the email login form so tests can sign in and reach the dashboard; the calendar trigger is a button with accessible name "Calendar Overview".
 - **Config:** `playwright.config.js`; base URL `http://localhost:5175/uav-fleet-dashboard/`.
-- **E2E 全部綠燈：** 在 `.env` 設定 `E2E_AUTH_EMAIL`、`E2E_AUTH_PASSWORD`（可登入的測試帳號）後再跑 `npm run test:e2e`，則 4 個 authenticated 測試會執行；否則會 skip。
+- **E2E all green:** Set `E2E_AUTH_EMAIL` and `E2E_AUTH_PASSWORD` in `.env` (a valid test account), then run `npm run test:e2e`; the 4 authenticated tests will run; otherwise they are skipped.
 
 ---
 

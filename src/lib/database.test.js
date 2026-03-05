@@ -9,6 +9,7 @@ vi.mock('./supabase', () => {
     select: () => chain,
     order: () => chain,
     eq: () => chain,
+    is: () => chain,
     single: () => chain,
     insert: () => chain,
     update: () => chain,
